@@ -1,8 +1,8 @@
 # Expense Tracker
 
 ## Live links
-- Frontend: https://your-app.vercel.app
-- API: https://your-api.onrender.com
+- Frontend: https://expense-tracker-client-rouge.vercel.app/
+- API: https://expense-tracker-api-mbrv.onrender.com
 
 ## Note on first load
 The backend runs on Render's free tier, which sleeps after 15 minutes
@@ -90,7 +90,7 @@ curl http://localhost:5000/health
 3. Build command: `npm install`
 4. Start command: `node server.js`
 5. Environment variables:
-   - `CLIENT_ORIGIN` = `https://your-app.vercel.app`
+   - `CLIENT_ORIGIN` = `https://expense-tracker-client-rouge.vercel.app/`
    - `DB_PATH` = `./data/expenses.db`
    - `NODE_ENV` = `production`
 6. No persistent disk required — data auto-seeds on every startup
@@ -100,4 +100,4 @@ curl http://localhost:5000/health
 2. Root directory: `client`
 3. Build command: `npm run build`
 4. Output directory: `dist`
-5. Environment variable: `VITE_API_URL` = `https://your-api.onrender.com`
+5. Environment variable: `VITE_API_URL` = `https://expense-tracker-api-mbrv.onrender.com`
