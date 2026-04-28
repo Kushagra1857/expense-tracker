@@ -1,0 +1,15 @@
+export const CATEGORIES = [
+  'Groceries',
+  'Rent',
+  'Electricity',
+  'Petrol',
+  'Auto / Cab',
+  'Medicines',
+  'OTT / Entertainment',
+  'Mobile Recharge',
+  'Dining / Zomato',
+  'School / Tuition',
+  'Clothing',
+  'EMI / Loan',
+  'Miscellaneous',
+];
