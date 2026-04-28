@@ -1,5 +1,3 @@
-import { config } from 'dotenv';
-config();
 import { getDb } from './database.js';
 import { toPaise } from '../utils/moneyUtils.js';
 
@@ -16,26 +14,40 @@ const SEEDS = [
   { amount: '580.00',   category: 'Auto / Cab',           description: 'Ola rides to office Mon–Wed, Powai to BKC',         date: '2025-04-15', idempotencyKey: 'seed-00000000-0000-0000-0000-000000000010' },
 ];
 
-const db = getDb();
-const existing = db.prepare('SELECT COUNT(*) as c FROM expenses').get();
+/**
+ * Seed the database with sample expenses if empty.
+ * Idempotent — safe to call on every startup.
+ */
+export const seedIfEmpty = () => {
+  const db = getDb();
+  const existing = db.prepare('SELECT COUNT(*) as c FROM expenses').get();
 
-if (existing.c > 0) {
-  console.log('Seed data already present — skipping.');
+  if (existing.c > 0) {
+    console.log('Seed data already present — skipping.');
+    return;
+  }
+
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO expenses (amount_paise, category, description, date, idempotency_key)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  // Run all inserts in a single transaction — atomic, fast
+  const insertAll = db.transaction((seeds) => {
+    for (const s of seeds) {
+      insert.run(toPaise(s.amount), s.category, s.description, s.date, s.idempotencyKey);
+    }
+  });
+
+  insertAll(SEEDS);
+  console.log(`Seeded ${SEEDS.length} expenses successfully.`);
+};
+
+// Allow running as CLI script: node src/config/seed.js
+const isDirectRun = process.argv[1]?.includes('seed.js');
+if (isDirectRun) {
+  const { config } = await import('dotenv');
+  config();
+  seedIfEmpty();
   process.exit(0);
 }
-
-const insert = db.prepare(`
-  INSERT OR IGNORE INTO expenses (amount_paise, category, description, date, idempotency_key)
-  VALUES (?, ?, ?, ?, ?)
-`);
-
-// Run all inserts in a single transaction — atomic, fast
-const insertAll = db.transaction((seeds) => {
-  for (const s of seeds) {
-    insert.run(toPaise(s.amount), s.category, s.description, s.date, s.idempotencyKey);
-  }
-});
-
-insertAll(SEEDS);
-console.log(`Seeded ${SEEDS.length} expenses successfully.`);
-process.exit(0);

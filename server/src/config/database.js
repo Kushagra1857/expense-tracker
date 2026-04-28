@@ -1,10 +1,11 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// On Render: DB_PATH env var points to /data/expenses.db (persistent volume)
+// On Render free tier: DB_PATH=./data/expenses.db (local file, no persistent disk)
 // Locally: falls back to /server/data/expenses.db
 const DB_PATH = process.env.DB_PATH ||
   path.resolve(__dirname, '../../data/expenses.db');
@@ -13,6 +14,12 @@ let db;
 
 export const getDb = () => {
   if (db) return db;
+
+  // Ensure data directory exists (gitignored, won't exist after fresh clone/deploy)
+  const dir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 
   db = new Database(DB_PATH);
 

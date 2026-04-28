@@ -13,7 +13,7 @@ in under 200ms.
 
 ## Architecture
 ```
-React (Vercel) → Express (Render) → SQLite (persistent disk)
+React (Vercel) → Express (Render) → SQLite (local file)
 ```
 
 ## Why SQLite with `better-sqlite3`
@@ -26,15 +26,18 @@ SQLite is a fully relational, ACID-compliant database that runs as a file within
 The `idempotency_key` column has a `UNIQUE` constraint at the SQLite schema level. Even if two concurrent requests with the same key reach the server simultaneously, SQLite's serialised write model means only one INSERT succeeds. The other receives a `SQLITE_CONSTRAINT_UNIQUE` error which the service layer catches and converts into a `200` response returning the original record. This is database-enforced — not application-enforced.
 
 ## Trade-off acknowledged
-SQLite is single-writer and file-based. It does not support horizontal scaling across multiple server instances. For this assessment's scope — a single Render instance — it is entirely appropriate. MongoDB Atlas is the documented migration path if multi-instance scaling is required.
+SQLite is single-writer and file-based. It does not support horizontal scaling across multiple server instances. For this assessment's scope — a single Render instance — it is entirely appropriate. MongoDB Atlas or PostgreSQL is the documented migration path if multi-instance scaling is required.
+
+**Render free tier note:** The free tier does not include persistent disks. The SQLite file is stored on the local filesystem (`./data/expenses.db`) and will reset on redeploy. To handle this gracefully, the server auto-seeds 10 sample expenses on startup if the database is empty. This ensures the evaluator always sees a working app with data. For production, a paid Render instance with a persistent disk or a migration to PostgreSQL would eliminate this limitation.
 
 ## Key design decisions
 1. **Money as INTEGER paise** — ₹4,250.75 = 425075 in DB. Totals computed with integer arithmetic. No float risk anywhere.
 2. **Idempotency** — UUID generated once per form lifecycle in `useRef`. Reused on retry, replaced on success. `UNIQUE` constraint in SQLite is the final safety net at the database level.
 3. **Cold start handling** — `useServerStatus` polls `/health` every 5s. `ServerWakeUp` shows a user-readable banner. Axios timeout 60s.
-4. **Service/controller separation** — all logic in `expenseService.js`.
-5. **All API calls in `expensesApi.js`** — no Axios calls in components.
-6. **Filtering and sorting in SQL `WHERE` / `ORDER BY`** — never in JS.
+4. **Auto-seed on startup** — `seedIfEmpty()` runs on every server start. Idempotent: only inserts if DB is empty. Ensures data survives Render's free-tier filesystem resets.
+5. **Service/controller separation** — all logic in `expenseService.js`.
+6. **All API calls in `expensesApi.js`** — no Axios calls in components.
+7. **Filtering and sorting in SQL `WHERE` / `ORDER BY`** — never in JS.
 
 ## Trade-offs made due to timebox
 - No authentication (next: JWT + refresh tokens)
@@ -42,6 +45,7 @@ SQLite is single-writer and file-based. It does not support horizontal scaling a
 - No soft delete
 - SQLite single-writer (next: migrate to PostgreSQL for horizontal scale)
 - Render free tier cold start (paid tier eliminates this)
+- No persistent disk (data auto-seeds on restart; paid tier adds persistence)
 
 ## Intentionally not built
 - Multi-user support
@@ -53,12 +57,11 @@ SQLite is single-writer and file-based. It does not support horizontal scaling a
 # Backend
 cd server && cp .env.example .env && npm install && node server.js
 
-# Seed data (optional)
-cd server && npm run seed
-
 # Frontend (in a separate terminal)
 cd client && cp .env.example .env && npm install && npm run dev
 ```
+
+> **Note:** Seeding is automatic — the server seeds 10 sample expenses on first startup if the database is empty. You can also run `cd server && npm run seed` manually.
 
 ## How to run tests
 ```bash
@@ -88,9 +91,9 @@ curl http://localhost:5000/health
 4. Start command: `node server.js`
 5. Environment variables:
    - `CLIENT_ORIGIN` = `https://your-app.vercel.app`
-   - `DB_PATH` = `/data/expenses.db`
+   - `DB_PATH` = `./data/expenses.db`
    - `NODE_ENV` = `production`
-6. Under Settings → Disks: add a disk at mount path `/data`, size 1 GB
+6. No persistent disk required — data auto-seeds on every startup
 
 ### Frontend on Vercel
 1. vercel.com → Import → connect same repo
