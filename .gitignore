@@ -30,3 +30,8 @@ build/
 
 # coverage
 coverage/
+
+*.db
+*.db-wal
+*.db-shm
+server/data/
