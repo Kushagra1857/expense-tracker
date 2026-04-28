@@ -90,7 +90,7 @@ curl http://localhost:5000/health
 3. Build command: `npm install`
 4. Start command: `node server.js`
 5. Environment variables:
-   - `CLIENT_ORIGIN` = `https://expense-tracker-client-rouge.vercel.app/`
+   - `CLIENT_ORIGIN` = `https://expense-tracker-client-rouge.vercel.app`
    - `DB_PATH` = `./data/expenses.db`
    - `NODE_ENV` = `production`
 6. No persistent disk required — data auto-seeds on every startup
