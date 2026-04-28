@@ -5,20 +5,29 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// On Render free tier: DB_PATH=./data/expenses.db (local file, no persistent disk)
-// Locally: falls back to /server/data/expenses.db
-const DB_PATH = process.env.DB_PATH ||
-  path.resolve(__dirname, '../../data/expenses.db');
+let DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '../../data/expenses.db');
+
+// FREE TIER PROTECTION: If DB_PATH is incorrectly set to the absolute path '/data/...'
+// (which requires a paid persistent disk and causes EACCES on free tier),
+// we forcefully redirect it into the local project directory.
+if (DB_PATH !== ':memory:' && DB_PATH.startsWith('/data')) {
+  DB_PATH = path.resolve(__dirname, '../../', DB_PATH.replace(/^\/+/, ''));
+} else if (DB_PATH !== ':memory:' && !path.isAbsolute(DB_PATH)) {
+  // If it's './data/expenses.db', resolve it safely against the project root
+  DB_PATH = path.resolve(process.cwd(), DB_PATH);
+}
 
 let db;
 
 export const getDb = () => {
   if (db) return db;
 
-  // Ensure data directory exists (gitignored, won't exist after fresh clone/deploy)
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  // Ensure data directory exists (only if not an in-memory DB)
+  if (DB_PATH !== ':memory:') {
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
   }
 
   db = new Database(DB_PATH);
